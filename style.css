@@ -10,7 +10,18 @@ header {
   background: #0077b6;
   color: white;
   padding: 1rem;
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+header button {
+  background: white;
+  color: #0077b6;
+  border: none;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  border-radius: 5px;
 }
 
 main {
@@ -35,6 +46,8 @@ button {
   color: white;
   border: none;
   cursor: pointer;
+  margin-top: 0.5rem;
+  border-radius: 5px;
 }
 
 ul {
@@ -47,4 +60,8 @@ li {
   padding: 0.7rem;
   margin-bottom: 0.5rem;
   border-radius: 5px;
+}
+
+.hidden {
+  display: none;
 }
