@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SquashCoach</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>SquashCoach</h1>
+  </header>
+
+  <main>
+    <section id="profile">
+      <h2>Player Profile</h2>
+      <label for="skillLevel">Select Skill Level:</label>
+      <select id="skillLevel">
+        <option value="beginner">Beginner</option>
+        <option value="intermediate">Intermediate</option>
+        <option value="advanced">Advanced</option>
+      </select>
+    </section>
+
+    <section id="matchTracker">
+      <h2>Track Matches</h2>
+      <form id="matchForm">
+        <input type="text" id="opponent" placeholder="Opponent Name" required>
+        <input type="number" id="yourScore" placeholder="Your Score" required>
+        <input type="number" id="opponentScore" placeholder="Opponent Score" required>
+        <button type="submit">Add Match</button>
+      </form>
+
+      <ul id="matchList"></ul>
+    </section>
+
+    <section id="drills">
+      <h2>Recommended Drills & Tutorials</h2>
+      <ul id="drillList">
+        <!-- Drills will populate here -->
+      </ul>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
