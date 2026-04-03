@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SquashCoach - Submit Match</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+    body {
+        background-color: var(--bs-body-bg);
+    }
+    .container {
+        max-width: 650px;
+        background-color: var(--bs-body-bg);
+        padding: 2rem;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        border-radius: 1rem;
+        box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+    h2 {
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+    .game-row {
+        margin-bottom: 1rem;
+    }
+    #submitMatch {
+        margin-top: 1rem;
+    }
+    /* Dark mode for the match submission container */
+    @media (prefers-color-scheme: dark) {
+        .container {
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            box-shadow: 0 0 15px rgba(255,255,255,0.05);
+        }
+        input.form-control {
+            background-color: #2a2a2a;
+            color: #e0e0e0;
+            border-color: #444;
+        }
+        input.form-control::placeholder {
+            color: #bbb;
+        }
+        .btn-outline-primary, .btn-success {
+            background-color: #2a2a2a;
+            color: #e0e0e0;
+            border-color: #555;
+        }
+        .btn-outline-primary:hover, .btn-success:hover {
+            opacity: 0.85;
+        }
+    }
+</style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg bg-body-tertiary">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">SquashCoach</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+            data-bs-target="#navbarNav" aria-controls="navbarNav"
+            aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto" id="navLinks"></ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <h2>Submit Match Scores</h2>
+
+    <div class="mb-3">
+        <label for="opponentName" class="form-label">Opponent Name</label>
+        <input type="text" class="form-control" id="opponentName" placeholder="Opponent Name">
+    </div>
+
+    <div class="mb-3">
+        <label for="userRating" class="form-label">Your US Squash Rating</label>
+        <input type="number" step="0.01" class="form-control" id="userRating" placeholder="e.g., 3.7">
+    </div>
+
+    <div class="mb-3">
+        <label for="opponentRating" class="form-label">Opponent US Squash Rating</label>
+        <input type="number" step="0.01" class="form-control" id="opponentRating" placeholder="e.g., 4.0">
+    </div>
+
+    <div class="mb-3">
+        <label for="gamesPlayed" class="form-label">Number of Games</label>
+        <input type="number" class="form-control" id="gamesPlayed" placeholder="e.g., 3" min="1">
+    </div>
+
+    <button class="btn btn-outline-primary w-100 mb-3" id="generateGames">Generate Game Inputs</button>
+    <div id="gamesContainer"></div>
+    <button class="btn btn-success w-100" id="submitMatch">Submit Match</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+
+<script type="module">
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyASWLSUE6DWMaQN7SpWBtCelDdVc30pTNM",
+    authDomain: "squashcoach-f1cea.firebaseapp.com",
+    projectId: "squashcoach-f1cea"
+};
+
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const navLinks = document.getElementById("navLinks");
+let currentUser = null;
+
+document.addEventListener("DOMContentLoaded", () => {
+    // Check if user prefers dark mode
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    if(prefersDark) {
+        enableDarkMode();
+    }
+
+    // Optional: listen for system changes
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+        if(e.matches) enableDarkMode();
+        else disableDarkMode();
+    });
+
+    function enableDarkMode() {
+        document.body.classList.add('bg-dark', 'text-light');
+        document.querySelectorAll('.card').forEach(card => {
+            card.classList.add('bg-secondary', 'text-light');
+            card.classList.remove('bg-white', 'text-dark');
+        });
+        document.querySelectorAll('.form-control').forEach(input => {
+            input.classList.add('bg-dark', 'text-light', 'border-light');
+            input.classList.remove('bg-white', 'text-dark');
+        });
+        document.querySelectorAll('.navbar').forEach(nav => {
+            nav.classList.add('navbar-dark', 'bg-dark');
+            nav.classList.remove('navbar-light', 'bg-body-tertiary');
+        });
+    }
+
+    function disableDarkMode() {
+        document.body.classList.remove('bg-dark', 'text-light');
+        document.querySelectorAll('.card').forEach(card => {
+            card.classList.remove('bg-secondary', 'text-light');
+            card.classList.add('bg-white', 'text-dark');
+        });
+        document.querySelectorAll('.form-control').forEach(input => {
+            input.classList.remove('bg-dark', 'text-light', 'border-light');
+            input.classList.add('bg-white', 'text-dark');
+        });
+        document.querySelectorAll('.navbar').forEach(nav => {
+            nav.classList.remove('navbar-dark', 'bg-dark');
+            nav.classList.add('navbar-light', 'bg-body-tertiary');
+        });
+    }
+});
+
+function renderNav(user) {
+    if (user) {
+        navLinks.innerHTML = `
+            <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+            <li class="nav-item"><a class="nav-link active" aria-current="page" href="/matches">Log a Match</a></li>
+            <li class="nav-item"><a class="nav-link" href="/stats">Stats</a></li>
+            <li class="nav-item d-flex align-items-center">
+                <span class="nav-link text-primary fw-bold">${user.displayName || user.email || "User"}</span>
+            </li>
+            <li class="nav-item d-flex align-items-center">
+                <button class="btn btn-outline-danger btn-sm ms-2" id="logoutBtn">Logout</button>
+            </li>
+        `;
+
+        document.getElementById("logoutBtn").addEventListener("click", async () => {
+            await signOut(auth);
+            window.location.href = "/login";
+        });
+    } else {
+        navLinks.innerHTML = `
+            <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+            <li class="nav-item"><a class="nav-link" href="/login">Login / Register</a></li>
+        `;
+    }
+}
+
+onAuthStateChanged(auth, (user) => {
+    currentUser = user;
+    if (!user) {
+        window.location.href = "/login";
+        return;
+    }
+    renderNav(user);
+});
+
+document.getElementById("generateGames").addEventListener("click", () => {
+    const container = document.getElementById("gamesContainer");
+    container.innerHTML = "";
+
+    const totalGames = parseInt(document.getElementById("gamesPlayed").value, 10);
+    if (!Number.isInteger(totalGames) || totalGames < 1) {
+        alert("Please enter a valid number of games.");
+        return;
+    }
+
+    for (let i = 1; i <= totalGames; i++) {
+        container.innerHTML += `
+            <div class="game-row">
+                <label class="form-label">Game ${i} - Your Points:</label>
+                <input type="number" class="form-control mb-1 userPoints" required>
+                <label class="form-label">Game ${i} - Opponent Points:</label>
+                <input type="number" class="form-control opponentPoints" required>
+            </div>
+        `;
+    }
+});
+
+function calculateElo(userRating, opponentRating, userPointsArr, opponentPointsArr) {
+    const initialElo = 1000 + userRating * 200;
+    const opponentElo = 1000 + opponentRating * 200;
+    const totalGames = userPointsArr.length;
+
+    const gamesWon = userPointsArr.reduce((acc, u, i) => acc + (u > opponentPointsArr[i] ? 1 : 0), 0);
+    const gameRatio = gamesWon / totalGames;
+
+    const userPoints = userPointsArr.reduce((a, b) => a + b, 0);
+    const opponentPoints = opponentPointsArr.reduce((a, b) => a + b, 0);
+
+    const pointRatio = userPoints / (userPoints + opponentPoints);
+    const adjustedPoint = (pointRatio - 0.5) * 2;
+    const overallScore = Math.max(0, Math.min(1, gameRatio + 0.2 * adjustedPoint));
+
+    const E = 1 / (1 + 10 ** ((opponentElo - initialElo) / 400));
+    const K = 70;
+    const newElo = initialElo + K * (overallScore - E);
+
+    return Math.round(newElo);
+}
+
+document.getElementById("submitMatch").addEventListener("click", async () => {
+    if (!currentUser) {
+        alert("You must be logged in.");
+        return;
+    }
+
+    const opponentName = document.getElementById("opponentName").value.trim();
+    const userRating = parseFloat(document.getElementById("userRating").value);
+    const opponentRating = parseFloat(document.getElementById("opponentRating").value);
+
+    const userPointsInputs = Array.from(document.getElementsByClassName("userPoints")).map(i => parseInt(i.value, 10));
+    const opponentPointsInputs = Array.from(document.getElementsByClassName("opponentPoints")).map(i => parseInt(i.value, 10));
+
+    if (
+        !opponentName ||
+        Number.isNaN(userRating) ||
+        Number.isNaN(opponentRating) ||
+        userPointsInputs.length === 0 ||
+        userPointsInputs.length !== opponentPointsInputs.length ||
+        userPointsInputs.some(Number.isNaN) ||
+        opponentPointsInputs.some(Number.isNaN)
+    ) {
+        alert("Please fill in all fields and points for every game.");
+        return;
+    }
+
+    const newElo = calculateElo(userRating, opponentRating, userPointsInputs, opponentPointsInputs);
+
+    try {
+        await addDoc(collection(db, "matches"), {
+            user_uid: currentUser.uid,
+            user_name: currentUser.displayName || currentUser.email || "User",
+            user_rating: userRating,
+            opponent_name: opponentName,
+            opponent_rating: opponentRating,
+            user_points: userPointsInputs,
+            opponent_points: opponentPointsInputs,
+            new_elo: newElo,
+            timestamp: serverTimestamp()
+        });
+
+        alert(`Match submitted!`);
+        window.location.reload();
+    } catch (err) {
+        console.error(err);
+        alert("Error submitting match: " + err.message);
+    }
+});
+</script>
+</body>
+</html>

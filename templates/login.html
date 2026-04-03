@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>SquashCoach Login</title>
+        <!-- Bootstrap CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+            .login-container {
+                display: grid;
+                place-items: center;
+                background: white;
+                position: absolute;
+                top: 50%; left: 50%;
+                transform: translate(-50%, -50%);
+                padding: 2rem;
+                border-radius: 0.5rem;
+                box-shadow: 0 0 15px rgba(0,0,0,0.1);
+                text-align: center;
+                width: 350px;
+            }
+            h2 {
+                margin-bottom: 1.5rem;
+            }
+            .btn-google {
+                background-color: #db4437;
+                color: white;
+                margin-top: 1rem;
+            }
+            .btn-google:hover {
+                background-color: #c33d2f;
+                color: white;
+            }
+        </style>
+    </head>
+    <body>
+        <nav class="navbar navbar-expand-lg bg-body-tertiary">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="/">SquashCoach</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/login">Login/Register</a>
+                    </li>
+                </ul>
+                </div>
+            </div>
+        </nav>
+        <div class="login-container">
+            <h2>Sign in to SquashCoach</h2>
+            <p>Use your Google account to log in</p>
+            <button id="googleSignIn" class="btn btn-google btn-lg w-100">
+                <img src="https://img.icons8.com/color/24/google-logo.png" alt="Google" style="vertical-align:middle;margin-right:8px;">
+                Sign in with Google
+            </button>
+        </div>
+
+        <!-- Firebase -->
+        <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js"></script>
+
+        <script type="module">
+            // Import the functions you need
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+            import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+
+            // Your Firebase config
+            const firebaseConfig = {
+                apiKey: "AIzaSyASWLSUE6DWMaQN7SpWBtCelDdVc30pTNM",
+                authDomain: "squashcoach-f1cea.firebaseapp.com",
+                projectId: "squashcoach-f1cea"
+            };
+
+            // Initialize Firebase
+            const app = initializeApp(firebaseConfig);
+            const auth = getAuth(app);
+            const provider = new GoogleAuthProvider();
+
+            // Google Sign-In button
+            const googleBtn = document.getElementById("googleSignIn");
+            googleBtn.addEventListener("click", async () => {
+                try {
+                    const result = await signInWithPopup(auth, provider);
+                    const user = result.user;
+                    alert("Signed in as: " + user.displayName + " (" + user.email + ")");
+                    window.location.href = "/matches";
+                } catch (error) {
+                    console.error(error);
+                    alert("Error signing in: " + error.message);
+                }
+            });
+        </script>
+
+    </body>
+    </html>

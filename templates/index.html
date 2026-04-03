@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>SquashCoach</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+
+    </head>
+    <body>
+        <nav class="navbar navbar-expand-lg bg-body-tertiary">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="/">SquashCoach</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto" id="navLinks">
+                    
+                </ul>
+                </div>
+            </div>
+        </nav>
+        <div class="container text-center mt-5">
+        <h1 class="display-3 fw-bold">SquashCoach</h1>
+        <p class="lead mt-3">
+            Track your matches, calculate your ELO, and level up your squash game.
+        </p>
+        <a href="/login" class="btn btn-primary btn-lg mt-3">
+            Start Logging Matches
+        </a>
+    </div>
+
+    <!-- Features Section -->
+    <div class="container mt-5">
+        <div class="row text-center">
+            
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">📊 Track Matches</h5>
+                        <p class="card-text">
+                            Log every match with detailed scores and opponent ratings.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">🏆 Per-Match Ratings</h5>
+                        <p class="card-text">
+                            Get accurate ratings for each match based on performance and scores
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">📈 Improve</h5>
+                        <p class="card-text">
+                            Analyze your performance and track your progress over time.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        <script type="module" src="/static/js/navbar.js"></script>
+        <script type="module">
+            document.addEventListener("DOMContentLoaded", () => {
+            // Check if user prefers dark mode
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+            if(prefersDark) {
+                enableDarkMode();
+            }
+
+            // Optional: listen for system changes
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+                if(e.matches) enableDarkMode();
+                else disableDarkMode();
+            });
+
+            function enableDarkMode() {
+                document.body.classList.add('bg-dark', 'text-light');
+                document.querySelectorAll('.card').forEach(card => {
+                    card.classList.add('bg-secondary', 'text-light');
+                    card.classList.remove('bg-white', 'text-dark');
+                });
+                document.querySelectorAll('.form-control').forEach(input => {
+                    input.classList.add('bg-dark', 'text-light', 'border-light');
+                    input.classList.remove('bg-white', 'text-dark');
+                });
+                document.querySelectorAll('.navbar').forEach(nav => {
+                    nav.classList.add('navbar-dark', 'bg-dark');
+                    nav.classList.remove('navbar-light', 'bg-body-tertiary');
+                });
+            }
+
+            function disableDarkMode() {
+                document.body.classList.remove('bg-dark', 'text-light');
+                document.querySelectorAll('.card').forEach(card => {
+                    card.classList.remove('bg-secondary', 'text-light');
+                    card.classList.add('bg-white', 'text-dark');
+                });
+                document.querySelectorAll('.form-control').forEach(input => {
+                    input.classList.remove('bg-dark', 'text-light', 'border-light');
+                    input.classList.add('bg-white', 'text-dark');
+                });
+                document.querySelectorAll('.navbar').forEach(nav => {
+                    nav.classList.remove('navbar-dark', 'bg-dark');
+                    nav.classList.add('navbar-light', 'bg-body-tertiary');
+                });
+            }
+        });
+        </script>
+    </body>
+</html>
