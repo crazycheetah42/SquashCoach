@@ -20,14 +20,13 @@
 </style>
 </head>
 <body>
-<nav class="navbar navbar-expand-lg bg-body-tertiary">
+<nav class="navbar navbar-expand-lg bg-body-tertiary" id="mainNavbar">
     <div class="container-fluid">
         <a class="navbar-brand" href="/">SquashCoach</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
-            data-bs-target="#navbarNav">
+        <button class="navbar-toggler" type="button" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
-        <div class="collapse navbar-collapse">
+        <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto" id="navLinks"></ul>
         </div>
     </div>
@@ -90,7 +89,6 @@
     </div>
 </div>
 
-<script type="module" src="/static/js/navbar.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
@@ -98,7 +96,7 @@
 
 <script type="module">
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
 import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -114,11 +112,53 @@ const db = getFirestore(app);
 const eloCtx = document.getElementById("eloChart").getContext("2d");
 let eloChart;
 
+const navLinks = document.getElementById("navLinks");
+const navbarToggler = document.querySelector(".navbar-toggler");
+const navbarCollapse = document.getElementById("navbarNav");
+
+function renderNav(user) {
+    if (!navLinks) return;
+
+    if (user) {
+        navLinks.innerHTML = `
+            <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+            <li class="nav-item"><a class="nav-link active" aria-current="page" href="/matches">Log a Match</a></li>
+            <li class="nav-item"><a class="nav-link" href="/stats">Stats</a></li>
+            <li class="nav-item d-flex align-items-center">
+                <span class="nav-link text-primary fw-bold">${user.displayName || user.email || "User"}</span>
+            </li>
+            <li class="nav-item d-flex align-items-center">
+                <button class="btn btn-outline-danger btn-sm ms-2" id="logoutBtn">Logout</button>
+            </li>
+        `;
+
+        const logoutBtn = document.getElementById("logoutBtn");
+        if (logoutBtn) {
+            logoutBtn.addEventListener("click", async () => {
+                await signOut(auth);
+                window.location.href = "/login";
+            });
+        }
+    } else {
+        navLinks.innerHTML = `
+            <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+            <li class="nav-item"><a class="nav-link" href="/login">Login / Register</a></li>
+        `;
+    }
+}
+
+// Mobile toggler
+if (navbarToggler && navbarCollapse) {
+    navbarToggler.addEventListener("click", () => {
+        navbarCollapse.classList.toggle("show");
+    });
+}
+
 onAuthStateChanged(auth, async user => {
     if (!user) return window.location.href = "/login";
+    renderNav(user);
 
     const snapshot = await getDocs(query(collection(db, "matches"), orderBy("timestamp", "asc")));
-
     const matches = [];
     const eloProgression = [];
 
@@ -134,20 +174,16 @@ onAuthStateChanged(auth, async user => {
     });
 
     document.getElementById("totalMatches").innerText = matches.length;
-
     const wins = matches.filter(m =>
         m.user_points.reduce((a,u,i)=>a + (u>m.opponent_points[i]?1:0),0)
         > m.user_points.length/2
     ).length;
-
     document.getElementById("matchesWon").innerText = wins;
-
     document.getElementById("currentRating").innerText =
         matches.length ? ((matches.at(-1).new_elo-1000)/200).toFixed(2) : 0;
 
     const tbody = document.querySelector("#matchesTable tbody");
     tbody.innerHTML = "";
-
     matches.slice(-10).reverse().forEach(m => {
         const tr = document.createElement("tr");
         const won = m.user_points.reduce((a,u,i)=>a+(u>m.opponent_points[i]?1:0),0);
@@ -179,21 +215,8 @@ onAuthStateChanged(auth, async user => {
             options: {
                 plugins: { legend: { labels: { color: textColor } } },
                 scales: {
-                    x: {
-                        type: "time",
-                        time: {
-                            unit: "day",
-                            displayFormats: { day: "MMM d" },
-                            tooltipFormat: "MMM d, yyyy"
-                        },
-                        ticks: { color: textColor },
-                        grid: { color: gridColor }
-                    },
-                    y: {
-                        ticks: { color: textColor },
-                        grid: { color: gridColor },
-                        min: 0
-                    }
+                    x: { type: "time", time: { unit: "day", displayFormats: { day: "MMM d" }, tooltipFormat: "MMM d, yyyy" }, ticks: { color: textColor }, grid: { color: gridColor } },
+                    y: { ticks: { color: textColor }, grid: { color: gridColor }, min: 0 }
                 }
             }
         });
@@ -202,33 +225,24 @@ onAuthStateChanged(auth, async user => {
     function enableDark() {
         document.body.classList.add("bg-dark","text-light");
         document.querySelectorAll(".card").forEach(c => c.classList.add("bg-secondary","text-light"));
-        document.querySelector(".navbar").classList.replace("bg-body-tertiary","bg-dark");
-        document.querySelector(".navbar").classList.add("navbar-dark");
-
-        // Dark mode table
+        document.querySelector("#mainNavbar").classList.replace("bg-body-tertiary","bg-dark");
+        document.querySelector("#mainNavbar").classList.add("navbar-dark");
         document.querySelectorAll(".table").forEach(t => t.classList.add("table-dark"));
-
         createChart(true);
     }
 
     function disableDark() {
         document.body.classList.remove("bg-dark","text-light");
         document.querySelectorAll(".card").forEach(c => c.classList.remove("bg-secondary","text-light"));
-        document.querySelector(".navbar").classList.replace("bg-dark","bg-body-tertiary");
-        document.querySelector(".navbar").classList.remove("navbar-dark");
-
-        // Light mode table
+        document.querySelector("#mainNavbar").classList.replace("bg-dark","bg-body-tertiary");
+        document.querySelector("#mainNavbar").classList.remove("navbar-dark");
         document.querySelectorAll(".table").forEach(t => t.classList.remove("table-dark"));
-
         createChart(false);
     }
 
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     mq.matches ? enableDark() : disableDark();
-
-    mq.addEventListener("change", e => {
-        e.matches ? enableDark() : disableDark();
-    });
+    mq.addEventListener("change", e => e.matches ? enableDark() : disableDark());
 });
 </script>
 </body>
