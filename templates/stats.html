@@ -122,8 +122,8 @@ function renderNav(user) {
     if (user) {
         navLinks.innerHTML = `
             <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
-            <li class="nav-item"><a class="nav-link active" aria-current="page" href="/matches">Log a Match</a></li>
-            <li class="nav-item"><a class="nav-link" href="/stats">Stats</a></li>
+            <li class="nav-item"><a class="nav-link" href="/matches">Log a Match</a></li>
+            <li class="nav-item"><a class="nav-link active" aria-current="page" href="/stats">Stats</a></li>
             <li class="nav-item d-flex align-items-center">
                 <span class="nav-link text-primary fw-bold">${user.displayName || user.email || "User"}</span>
             </li>
