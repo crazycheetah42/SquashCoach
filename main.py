@@ -1,5 +1,6 @@
 import flet as ft
 import re
+import firebase_admin as fb
 
 def main(page: ft.Page):
     page.title = "SquashCoach"
