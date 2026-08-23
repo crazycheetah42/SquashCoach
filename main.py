@@ -1,12 +1,42 @@
 import flet as ft
 import re
-import firebase_admin as fb
 
 def main(page: ft.Page):
     page.title = "SquashCoach"
     page.padding = 0
     page.bgcolor = ft.Colors.SURFACE
     page.theme = ft.Theme(color_scheme_seed=ft.Colors.TEAL)
+
+    def open_sign_in(e):
+        sign_in_dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Sign in to SquashCoach"),
+            content=ft.Text("Use your Google account to sign in."),
+            actions=[
+                ft.Button(
+                    "Sign in with Google",
+                    icon=ft.Icons.LOGIN,
+                    on_click=lambda _: (setattr(sign_in_dialog, "open", False), page.update()),
+                ),
+                ft.TextButton("Cancel", on_click=lambda _: (setattr(sign_in_dialog, "open", False), page.update())),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+
+        page.dialog = sign_in_dialog
+        page.show_dialog(sign_in_dialog)
+
+
+    page.appbar = ft.AppBar(
+        title=ft.Text("SquashCoach", weight=ft.FontWeight.BOLD),
+        actions=[
+            ft.IconButton(
+                icon=ft.Icons.ACCOUNT_CIRCLE,
+                tooltip="Sign in with Google",
+                on_click=open_sign_in,
+            ),
+        ],
+    )
 
     def section_title(title, subtitle):
         return ft.Column(
