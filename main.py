@@ -1,5 +1,13 @@
 import flet as ft
 import re
+from logic import (
+    add_match,
+    get_matches,
+    get_signed_in_user,
+    login_desktop_user,
+    sign_out_user,
+    summarize_score,
+)
 
 def main(page: ft.Page):
     page.title = "SquashCoach"
@@ -7,16 +15,26 @@ def main(page: ft.Page):
     page.bgcolor = ft.Colors.SURFACE
     page.theme = ft.Theme(color_scheme_seed=ft.Colors.TEAL)
 
-    def open_sign_in(e):
+    signed_in_user = get_signed_in_user()
+
+    def show_sign_in_dialog():
+        def sign_in_with_google(_):
+            nonlocal signed_in_user
+            signed_in_user = login_desktop_user()
+            sign_in_dialog.open = False
+            update_profile_action()
+            refresh_dashboard()
+            page.update()
+
         sign_in_dialog = ft.AlertDialog(
-            modal=True,
+            modal=False,
             title=ft.Text("Sign in to SquashCoach"),
             content=ft.Text("Use your Google account to sign in."),
             actions=[
                 ft.Button(
                     "Sign in with Google",
                     icon=ft.Icons.LOGIN,
-                    on_click=lambda _: (setattr(sign_in_dialog, "open", False), page.update()),
+                    on_click=sign_in_with_google,
                 ),
                 ft.TextButton("Cancel", on_click=lambda _: (setattr(sign_in_dialog, "open", False), page.update())),
             ],
@@ -26,16 +44,66 @@ def main(page: ft.Page):
         page.dialog = sign_in_dialog
         page.show_dialog(sign_in_dialog)
 
+    def show_profile_dialog(_):
+        def sign_out(_):
+            nonlocal signed_in_user
+            sign_out_user()
+            signed_in_user = None
+            profile_dialog.open = False
+            update_profile_action()
+            refresh_dashboard()
+            page.update()
+            show_sign_in_dialog()
+
+        profile_dialog = ft.AlertDialog(
+            modal=False,
+            title=ft.Text("Google Account"),
+            content=ft.Column(
+                tight=True,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    ft.CircleAvatar(
+                        foreground_image_src=signed_in_user.get("photo_url"),
+                        content=ft.Icon(ft.Icons.ACCOUNT_CIRCLE),
+                        radius=32,
+                    ),
+                    ft.Text(signed_in_user.get("display_name") or "Google user", weight=ft.FontWeight.BOLD),
+                    ft.Text(signed_in_user.get("email") or ""),
+                ],
+            ),
+            actions=[ft.Button("Sign out", icon=ft.Icons.LOGOUT, on_click=sign_out)],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        page.dialog = profile_dialog
+        page.show_dialog(profile_dialog)
+
+    def open_profile_or_sign_in(_):
+        if signed_in_user:
+            show_profile_dialog(None)
+        else:
+            show_sign_in_dialog()
+
+    profile_action = ft.IconButton(on_click=open_profile_or_sign_in)
+
+    def update_profile_action():
+        if signed_in_user:
+            profile_action.icon = ft.CircleAvatar(
+                foreground_image_src=signed_in_user.get("photo_url"),
+                content=ft.Icon(ft.Icons.ACCOUNT_CIRCLE),
+                radius=18,
+            )
+            profile_action.icon_color = None
+            profile_action.tooltip = "Open Google Account"
+        else:
+            profile_action.icon = ft.Icons.ACCOUNT_CIRCLE
+            profile_action.icon_color = None
+            profile_action.tooltip = "Sign in with Google"
+
+    update_profile_action()
 
     page.appbar = ft.AppBar(
         title=ft.Text("SquashCoach", weight=ft.FontWeight.BOLD),
-        actions=[
-            ft.IconButton(
-                icon=ft.Icons.ACCOUNT_CIRCLE,
-                tooltip="Sign in with Google",
-                on_click=open_sign_in,
-            ),
-        ],
+        actions=[profile_action],
     )
 
     def section_title(title, subtitle):
@@ -46,6 +114,15 @@ def main(page: ft.Page):
                 ft.Text(subtitle, color=ft.Colors.ON_SURFACE_VARIANT),
             ],
         )
+
+    performance_summary = ft.Text(color=ft.Colors.ON_SURFACE_VARIANT)
+    performance_graph = ft.Row(
+        height=180,
+        spacing=16,
+        alignment=ft.MainAxisAlignment.CENTER,
+        vertical_alignment=ft.CrossAxisAlignment.END,
+    )
+    dashboard_status = ft.Text(color=ft.Colors.ON_SURFACE_VARIANT)
 
     graph_shell = ft.Container(
         height=280,
@@ -58,9 +135,8 @@ def main(page: ft.Page):
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=12,
             controls=[
-                ft.Icon(ft.Icons.SHOW_CHART, size=44, color=ft.Colors.TEAL),
-                ft.Text("Your performance graph will appear here", weight=ft.FontWeight.W_500),
-                ft.Text("Log matches to start tracking progress.", color=ft.Colors.ON_SURFACE_VARIANT),
+                performance_summary,
+                performance_graph,
             ],
         ),
     )
@@ -102,7 +178,7 @@ def main(page: ft.Page):
                                 spacing=12,
                                 controls=[
                                     match_table,
-                                    ft.Text("Match data will be shown here once it is available.", color=ft.Colors.ON_SURFACE_VARIANT),
+                                    dashboard_status,
                                 ],
                             ),
                         ),
@@ -111,6 +187,93 @@ def main(page: ft.Page):
             ],
         ),
     )
+
+    def refresh_dashboard():
+        match_table.rows = []
+        performance_graph.controls = []
+        performance_summary.value = ""
+        dashboard_status.value = ""
+
+        if not signed_in_user:
+            performance_summary.value = "Sign in to see your performance."
+            dashboard_status.value = "Sign in to load your recent matches."
+            return
+
+        try:
+            matches = get_matches(signed_in_user)
+        except Exception as error:
+            performance_summary.value = "Performance data is unavailable."
+            dashboard_status.value = f"Unable to load matches: {error}"
+            return
+
+        summaries = []
+        for match in matches:
+            try:
+                summary = summarize_score(match["score"])
+            except (AttributeError, TypeError, ValueError):
+                continue
+            summaries.append((match, summary))
+
+        wins = sum(summary["result"] == "Won" for _, summary in summaries)
+        losses = sum(summary["result"] == "Lost" for _, summary in summaries)
+        performance_summary.value = f"{wins} wins  |  {losses} losses  |  {len(summaries)} matches"
+
+        for match, summary in summaries[:10]:
+            created_at = match.get("created_at")
+            date_label = created_at.strftime("%b %d") if created_at else "Recent"
+            match_table.rows.append(
+                ft.DataRow(
+                    cells=[
+                        ft.DataCell(ft.Text(date_label)),
+                        ft.DataCell(ft.Text(match["score"])),
+                        ft.DataCell(
+                            ft.Text(
+                                summary["result"],
+                                color=ft.Colors.TEAL if summary["result"] == "Won" else ft.Colors.ERROR,
+                            )
+                        ),
+                    ]
+                )
+            )
+
+        graph_matches = list(reversed(summaries[:8]))
+        maximum_games = max(
+            (summary["wins"] + summary["losses"] for _, summary in graph_matches),
+            default=1,
+        )
+        for index, (match, summary) in enumerate(graph_matches, start=1):
+            date_label = match.get("created_at")
+            date_label = date_label.strftime("%m/%d") if date_label else f"#{index}"
+            performance_graph.controls.append(
+                ft.Column(
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=4,
+                    controls=[
+                        ft.Row(
+                            vertical_alignment=ft.CrossAxisAlignment.END,
+                            spacing=3,
+                            controls=[
+                                ft.Container(
+                                    width=14,
+                                    height=max(12, 120 * summary["wins"] / maximum_games),
+                                    bgcolor=ft.Colors.TEAL,
+                                ),
+                                ft.Container(
+                                    width=14,
+                                    height=max(12, 120 * summary["losses"] / maximum_games),
+                                    bgcolor=ft.Colors.ERROR,
+                                ),
+                            ],
+                        ),
+                        ft.Text(date_label, size=11),
+                    ],
+                )
+            )
+
+        if not summaries:
+            dashboard_status.value = "No matches have been logged yet."
+
+    refresh_dashboard()
 
     score_input = ft.TextField(
         label="Match score",
@@ -137,8 +300,16 @@ def main(page: ft.Page):
             else:
                 wins = results.count("W")
                 losses = results.count("L")
-                score_feedback.color = ft.Colors.TEAL
-                score_feedback.value = f"Match preview: {'Won' if wins > losses else 'Lost'} ({wins}-{losses}) | Games: {' '.join(results)}"
+                if not signed_in_user:
+                    score_feedback.value = "Sign in before logging a match."
+                else:
+                    try:
+                        match_id = add_match(signed_in_user, score)
+                        refresh_dashboard()
+                        score_feedback.color = ft.Colors.TEAL
+                        score_feedback.value = f"Match saved ({match_id}). Result: {'Won' if wins > losses else 'Lost'} ({wins}-{losses}) | Games: {' '.join(results)}"
+                    except Exception as error:
+                        score_feedback.value = f"Unable to save match: {error}"
         page.update()
 
     log_match_view = ft.Container(
@@ -158,7 +329,7 @@ def main(page: ft.Page):
                         controls=[
                             ft.Text("Match score", size=16, weight=ft.FontWeight.BOLD),
                             ft.Text("Separate games with commas. The higher number in each game is the winner.", color=ft.Colors.ON_SURFACE_VARIANT),
-                            ft.Row(controls=[score_input, ft.Button("Preview match", icon=ft.Icons.CHECK, on_click=log_match)]),
+                            ft.Row(controls=[score_input, ft.Button("Save match", icon=ft.Icons.SAVE, on_click=log_match)]),
                             score_feedback,
                         ],
                     ),
