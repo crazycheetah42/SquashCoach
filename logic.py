@@ -191,7 +191,19 @@ def get_signed_in_user():
     creds = load_saved_session()
     if not creds or not creds.valid:
         return None
-    return _firebase_user_from_credentials(creds)
+
+    user = _firebase_user_from_credentials(creds)
+    profile_response = requests.get(
+        "https://openidconnect.googleapis.com/v1/userinfo",
+        headers={"Authorization": f"Bearer {creds.token}"},
+        timeout=30,
+    )
+    profile_response.raise_for_status()
+    profile = profile_response.json()
+    user["display_name"] = profile.get("name") or user.get("display_name")
+    user["photo_url"] = profile.get("picture") or user.get("photo_url")
+    user["email"] = profile.get("email") or user.get("email")
+    return user
 
 
 def sign_out_user():
