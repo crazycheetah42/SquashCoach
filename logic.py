@@ -4,15 +4,17 @@ import re
 import requests
 import firebase_admin
 from firebase_admin import credentials, firestore
+from pathlib import Path
 from urllib.parse import urlencode
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 
 
-CLIENT_SECRETS_FILE = "client_secret.json"
-TOKEN_CACHE_FILE = "token.json"
-SERVICE_ACCOUNT_FILE = "serviceAccountKey.json"
+BASE_DIR = Path(__file__).resolve().parent
+CLIENT_SECRETS_FILE = BASE_DIR / "client_secret.json"
+TOKEN_CACHE_FILE = BASE_DIR / "token.json"
+SERVICE_ACCOUNT_FILE = BASE_DIR / "serviceAccountKey.json"
 FIREBASE_API_KEY = "AIzaSyCrcrQXDo-YE89CudJau8TFyh1pXeasx5s"
 FIREBASE_PROJECT_ID = "squashcoach-505919"
 

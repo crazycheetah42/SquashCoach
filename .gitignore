@@ -1,2 +1,7 @@
 serviceAccountKey.json
 .venv
+build
+.flet
+__pycache__
+token.json
+client_secret.json
