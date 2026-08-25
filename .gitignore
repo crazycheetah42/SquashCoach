@@ -1,5 +1,6 @@
 serviceAccountKey.json
 .venv
+.vscode
 build
 .flet
 __pycache__

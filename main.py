@@ -7,10 +7,13 @@ from logic import (
     login_desktop_user,
     sign_out_user,
     summarize_score,
+    summarize_matches_by_month,
 )
 
-def main(page: ft.Page):
+async def main(page: ft.Page):
     page.title = "SquashCoach"
+    page.favicon = "favicon.png"
+    page.window.resizable = True
     page.padding = 0
     page.bgcolor = ft.Colors.SURFACE
     page.theme = ft.Theme(color_scheme_seed=ft.Colors.TEAL)
@@ -236,14 +239,12 @@ def main(page: ft.Page):
                 )
             )
 
-        graph_matches = list(reversed(summaries[:8]))
+        graph_matches = summarize_matches_by_month([match for match, _ in summaries])[-8:]
         maximum_games = max(
-            (summary["wins"] + summary["losses"] for _, summary in graph_matches),
+            (summary["wins"] + summary["losses"] for summary in graph_matches),
             default=1,
         )
-        for index, (match, summary) in enumerate(graph_matches, start=1):
-            date_label = match.get("created_at")
-            date_label = date_label.strftime("%m/%d") if date_label else f"#{index}"
+        for summary in graph_matches:
             performance_graph.controls.append(
                 ft.Column(
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -265,7 +266,7 @@ def main(page: ft.Page):
                                 ),
                             ],
                         ),
-                        ft.Text(date_label, size=11),
+                        ft.Text(summary["label"], size=11),
                     ],
                 )
             )
@@ -356,6 +357,7 @@ def main(page: ft.Page):
             expand=True,
             controls=[
                 ft.TabBar(
+                    tab_alignment=ft.TabAlignment.CENTER,
                     tabs=[
                         ft.Tab(label="Dashboard", icon=ft.Icons.DASHBOARD),
                         ft.Tab(label="Log a Match", icon=ft.Icons.SPORTS_TENNIS),
@@ -369,5 +371,10 @@ def main(page: ft.Page):
         ),
     )
     page.add(tabs)
+
+    page.window.width = 1280
+    page.window.height = 768
+    page.update()
+    await page.window.center()
 
 ft.run(main)

@@ -2,11 +2,13 @@ import os
 import json
 import re
 import requests
+import secrets
+import webbrowser
 import firebase_admin
 from firebase_admin import credentials, firestore
 from pathlib import Path
-from urllib.parse import urlencode
-from google_auth_oauthlib.flow import InstalledAppFlow
+from urllib.parse import parse_qs, urlencode, urlparse
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 
@@ -50,17 +52,77 @@ def login_desktop_user():
     if not creds or not creds.valid:
         print("Opening browser for Google authentication...")
 
-        flow = InstalledAppFlow.from_client_secrets_file(
-            CLIENT_SECRETS_FILE,
-            scopes=SCOPES
-        )
-
-        creds = flow.run_local_server(port=0)
+        creds = _run_google_oauth_flow()
 
         with open(TOKEN_CACHE_FILE, "w") as token_file:
             token_file.write(creds.to_json())
 
     return _firebase_user_from_credentials(creds)
+
+
+def _run_google_oauth_flow():
+    client_config = json.loads(CLIENT_SECRETS_FILE.read_text())
+    installed_config = client_config["installed"]
+    state = secrets.token_urlsafe(32)
+    callback_data = {}
+
+    class OAuthCallbackHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            callback_data.update(parse_qs(urlparse(self.path).query))
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.end_headers()
+            self.wfile.write(b"<h2>Sign-in complete</h2><p>You can close this window.</p>")
+
+        def log_message(self, format, *args):
+            pass
+
+    server = HTTPServer(("127.0.0.1", 0), OAuthCallbackHandler)
+    redirect_uri = f"http://localhost:{server.server_port}/"
+    auth_url = "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode({
+        "client_id": installed_config["client_id"],
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": " ".join(SCOPES),
+        "access_type": "offline",
+        "prompt": "consent",
+        "state": state,
+    })
+
+    webbrowser.open(auth_url)
+    server.handle_request()
+    server.server_close()
+
+    if callback_data.get("state", [None])[0] != state:
+        raise RuntimeError("Google authentication returned an invalid state.")
+    if "error" in callback_data:
+        raise RuntimeError(f"Google authentication failed: {callback_data['error'][0]}")
+    if "code" not in callback_data:
+        raise RuntimeError("Google authentication did not return an authorization code.")
+
+    response = requests.post(
+        installed_config["token_uri"],
+        data={
+            "code": callback_data["code"][0],
+            "client_id": installed_config["client_id"],
+            "client_secret": installed_config["client_secret"],
+            "redirect_uri": redirect_uri,
+            "grant_type": "authorization_code",
+        },
+        timeout=30,
+    )
+    response.raise_for_status()
+    token_data = response.json()
+
+    creds = Credentials(
+        token=token_data["access_token"],
+        refresh_token=token_data.get("refresh_token"),
+        token_uri=installed_config["token_uri"],
+        client_id=installed_config["client_id"],
+        client_secret=installed_config["client_secret"],
+        scopes=SCOPES,
+    )
+    return creds
 
 
 def _firebase_user_from_credentials(creds):
@@ -207,3 +269,31 @@ def summarize_score(score):
         "losses": losses,
         "result": "Won" if wins > losses else "Lost",
     }
+
+
+def summarize_matches_by_month(matches):
+    """Group match game results by calendar month for the performance graph."""
+    monthly = {}
+
+    for match in matches:
+        try:
+            summary = summarize_score(match["score"])
+        except (AttributeError, TypeError, ValueError):
+            continue
+
+        created_at = match.get("created_at")
+        month_key = created_at.strftime("%Y-%m") if created_at else "unknown"
+        month = monthly.setdefault(
+            month_key,
+            {
+                "label": created_at.strftime("%b %Y") if created_at else "Unknown",
+                "wins": 0,
+                "losses": 0,
+                "matches": 0,
+            },
+        )
+        month["wins"] += summary["wins"]
+        month["losses"] += summary["losses"]
+        month["matches"] += 1
+
+    return [monthly[key] for key in sorted(monthly)]
