@@ -1,0 +1,8 @@
+serviceAccountKey.json
+.venv
+.vscode
+build
+.flet
+__pycache__
+token.json
+client_secret.json
