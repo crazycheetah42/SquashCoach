@@ -1,0 +1,48 @@
+name: Build and Release Windows App
+
+on:
+  push:
+    tags:
+      - 'v*' # Triggers the workflow only when you push a tag starting with 'v' (e.g., v1.0.0)
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write # Crucial permission allowing GitHub to create the Release entry
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Flet and Dependencies
+        run: |
+          pip install flet
+          if (Test-Path requirements.txt) { pip install -r requirements.txt }
+
+      # The standard 'flet build windows' creates a 'build/windows' directory
+      - name: Build Windows Executable
+        run: flet build windows
+
+      # Compresses the compiled output folder into a single clean ZIP file
+      - name: Archive Build Files
+        shell: powershell
+        run: |
+          Compress-Archive -Path build\windows\* -DestinationPath FletWindowsApp.zip
+
+      # Automatically creates the Release on GitHub and uploads the ZIP
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: FletWindowsApp.zip
+          name: Release ${{ github.ref_name }}
+          body: |
+            Automated production build for Windows.
+            Triggered by tag: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
